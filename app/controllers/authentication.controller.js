@@ -3,6 +3,11 @@ import {getByEmail,getByUser,insertnewUser} from "../queries/queries.js"
 import bcryptjs from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { enviarEmailVerificacion } from "../services/mail.services.js";
+import path from "path";
+import {fileURLToPath} from "url";
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
 
 dotenv.config();
 
@@ -68,7 +73,21 @@ async function register (req,res){
      if(emailRows.length > 0){
      return res.status(400).send({status:"Error", message:"el email ya se encuentra registrado"})
      }
-   
+     
+     const tokenVerificacion = jwt.sign(
+      {email:email},
+      process.env.JWT_SECRET,
+      {expiresIn:"1h"}
+     )
+       
+     const mail = await enviarEmailVerificacion(email,tokenVerificacion)
+     console.log(mail)
+
+     if(mail.accepted===0){
+      return res(500).send({status:"error",message:"error enviando mail de verificacion"})
+     }
+       
+     
     const salt = await bcryptjs.genSalt(5);
     const hashPassword = await bcryptjs.hash(password,salt)
      console.log(hashPassword)
@@ -81,11 +100,37 @@ async function register (req,res){
 }
 
 
+async function verificarUsuario(req,res){
+
+  const{token} = req.params
+  console.log(token)
+  try{
+    
+    const decoded = jwt.verify(token,process.env.JWT_SECRET);
+    const usermail = decoded.email;
+    const db = await getConnection();
+    const query = "UPDATE usuarios SET verificado = true WHERE email = ?";
+    const [result] = await db.query(query,[usermail])
+
+    if(result.affectedRows === 0){
+      return res.status(400).send("Usuario no encontrado")
+    }
+     const rutaHtml = path.join(__dirname, "..", "pages", "verificacion.html");
+     return res.sendFile(rutaHtml)
+
+  }catch(error){
+
+    console.error(error)
+    return res.status(400).send("token invalido o expirado")
+}
+  
+}
 
 
 
 
 export const metodos = {
 login,
-register
+register,
+verificarUsuario
 }

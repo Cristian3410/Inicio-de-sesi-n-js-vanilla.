@@ -30,3 +30,4 @@ app.get("/register",autorizaciones.soloPublico,(req,res)=> res.sendFile(__dirnam
 app.get("/admin",autorizaciones.soloAdmin,(req,res)=> res.sendFile(__dirname + "/pages/admin/admin.html"))
 app.post("/api/register",metodos.register)
 app.post("/api/login",metodos.login)
+app.get("/verificar/:token", metodos.verificarUsuario)
