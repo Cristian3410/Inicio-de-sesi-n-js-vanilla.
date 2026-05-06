@@ -28,11 +28,20 @@ async function login(req,res){
   
     const userFound = userExist[0]
 
+    if(userFound.verificado === 0 || userFound.verificado === false){
+      return res.status(401).send({
+        status:"Error",
+        message:"Tu cuenta no ha sido verifcada, por favor revisa tu correo electronico"
+      });
+    }
+
     const loginCorrecto = await bcryptjs.compare(password,userFound.pass)
   
      if(!loginCorrecto){
       return res.status(400).send({status:"Error",message:"error al iniciar sesion"})
      }   
+       
+      
 
      const token = jwt.sign(
       {user:userFound.usuario},
